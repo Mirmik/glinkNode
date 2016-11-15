@@ -1,6 +1,6 @@
 console.log(text.green("GLINK script start"))
 
-mlib = ModuleLibrary.construct()
+mlib = ModuleLibrary.construct(script)
 module = (mod) => { mlib.module(mod) }
 
 variables = {
@@ -45,19 +45,13 @@ module ({
 	sources : ["mmm.cpp"],
 })
 
-//mlib.printModuleList()
-//modmake.printModule(":lib")
-//modmake.printPackList()
 
 scripts = script.findInTree("./", /.*\.gjs$/, /.*HIDE.*/)
-//console.log(scripts)
 script.evalFile(scripts)
 
-//script.evalScriptsInTree("./src", /\.gjs$/, /HIDE/)
+compiler = CXXModuleCompiler.construct(mlib)
 
-//context = modmake.cxxCompilerContext(variables)
-//context.setBuildDirectory("build")
-
-//context.make(":main")
+//console.log(compiler)
+compiler.printModuleList()
 
 console.log(text.green("Script is done"))

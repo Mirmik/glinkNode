@@ -15,8 +15,10 @@ script.setContext ({
 	text : text,
 	ModuleLibrary : require("./classes/ModuleLibrary.js"),
 	ScriptMachine : require("./classes/ScriptMachine.js"),
+	CXXModuleCompiler : require("./classes/CXXModuleCompiler.js"),
 	script : script
 })
 
 script.evalFile(glinkScript)
+
 

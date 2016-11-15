@@ -27,8 +27,9 @@ ModuleLibrary.printPackList = function() {
 	console.log(this.packList)
 }
 
-ModuleLibrary.construct = function() {
+ModuleLibrary.construct = function(script) {
 	var mlib = {}
+	mlib.script = script
 	mlib.moduleList = {}
 	mlib.packList = {}
 	mlib.__proto__ = ModuleLibrary
