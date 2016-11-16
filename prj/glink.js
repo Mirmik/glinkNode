@@ -49,9 +49,12 @@ module ({
 scripts = script.findInTree("./", /.*\.gjs$/, /.*HIDE.*/)
 script.evalFile(scripts)
 
-compiler = CXXModuleCompiler.construct(mlib)
+compiler = CXXModuleCompiler.construct()
+	.setModuleLibrary(mlib)
+	.printModuleList()
 
 //console.log(compiler)
-compiler.printModuleList()
+//compiler.printModuleList()
+//compiler.compile()
 
 console.log(text.green("Script is done"))
