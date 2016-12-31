@@ -71,5 +71,8 @@ rets = compiler.assembleModule("main", {
 
 if (rets === false) console.log(text.yellow("Nothing to do"))
 
+//globalModuleLibrary().printInfoRegExp(/^s.*/)
+//globalModuleLibrary().printModule("main")
+
 //console.log(rets)
 console.log(text.green("Script is done"))

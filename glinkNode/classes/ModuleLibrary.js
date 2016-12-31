@@ -11,31 +11,17 @@ function ModuleLibrary(script) {
 	this.moduleList = {}		
 }
 
-ModuleLibrary.prototype.restorePathArray = function(array, dir) { 
-	if (array == undefined) return;
-	for (var i = 0; i < array.length; i++) {
-		array[i] = path.resolve(dir, array[i]);
-	}
-}
-
+//ModuleLibrary.prototype.restorePathArray = function(array, dir) { 
+//	if (array == undefined) return;
+//	for (var i = 0; i < array.length; i++) {
+//		array[i] = path.resolve(dir, array[i]);
+//	}
+//
 ModuleLibrary.prototype.moduleInternalRoutine = function(Mod) {
 	var mod = Mod.mod;
 
-	if (mod.opts == undefined) mod.opts = {};
-	if (mod.sources == undefined) mod.sources = {};
-	if (mod.sources.cxx == undefined) mod.sources.cxx = [];
-	if (mod.sources.cc == undefined) mod.sources.cc = [];
-	if (mod.sources.s == undefined) mod.sources.s = [];
-
 	Mod.setMtime(script.mtime);
 	Mod.moduleDirectory = this.script.currentDir;
-
-	this.restorePathArray(mod.opts.includePaths, Mod.moduleDirectory);
-	this.restorePathArray(mod.opts.ldscripts, Mod.moduleDirectory);
-	
-	this.restorePathArray(mod.sources.cxx, Mod.moduleDirectory);
-	this.restorePathArray(mod.sources.cc, Mod.moduleDirectory);
-	this.restorePathArray(mod.sources.s, Mod.moduleDirectory);
 }
 
 ModuleLibrary.prototype.addModule = function(mod) {
@@ -160,7 +146,7 @@ ModuleLibrary.prototype.printModule = function(name) {
 
 ModuleLibrary.prototype.printInfo = function(name) {
 	var mod = this.moduleList[name];
-	if (mod === undefined) console.log(`\t${text.yellow(name)} is undefined module`);
+	if (mod === undefined) console.log(`${text.red(name)} is undefined module`);
 	else if (mod instanceof ModuleClass) {
 		console.log(`${text.yellow(name)} is simple module`);	
 	} else if (mod instanceof VariantModuleClass) {
@@ -168,6 +154,14 @@ ModuleLibrary.prototype.printInfo = function(name) {
 		for (var key in mod.implementations) {
 			console.log(`${key}`);
 		}
+	}
+}
+
+ModuleLibrary.prototype.printInfoRegExp = function(regex) {
+	console.log("Info for modules matches regexp",regex)
+	for (var key in this.moduleList) {
+		if (this.moduleList[key].name.match(regex) !== null) 
+			this.printInfo(this.moduleList[key].name);
 	}
 }
 
