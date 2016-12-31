@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 #coding: utf-8
 
-nodejs /usr/glink/glinkBase.js $1 $2 $3
+nodejs /usr/glink/glinkBase.js $1 $2 $3 $4 $5 $6

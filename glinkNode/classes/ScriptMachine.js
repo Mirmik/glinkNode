@@ -21,7 +21,11 @@ ScriptMachine.prototype.__evalFile = function (file, context, coding) {
 	var oldDirName = this.currentDir;
 
 	var resolve = path.resolve(this.currentDir, file);
-	
+	if (!fs.existsSync(resolve)) {
+		console.log("File is not exist");
+		process.exit(1);
+	}
+
 	//Добавляем файл в стэк зависимостей.
 	var file = new File(resolve);
 	var oldmtime = this.mtime;

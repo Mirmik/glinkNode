@@ -4,14 +4,46 @@ var ScriptMachine = require("./classes/ScriptMachine.js");
 var Glink = require("./classes/Glink.js");
 var ModuleLibrary = require("./classes/ModuleLibrary.js");
 
-glinkScript = "./glink.js"
+var argumentParser = require("./lib/argumentParser.js").argumentParser;
 
+/*
+	Default main script address
+*/
+var glinkScript = './glink.js'
+
+var minimist = require("minimist");
+
+var ARGV = process.argv.slice(2);
+var parse = minimist(ARGV);
+
+if (parse.help || parse.h) {
+	console.log("Glink makescript. HELP.")
+	console.log("-h or --help. Print this text.");
+	console.log("-v. Verbose.");
+	console.log("--script. Set script address. Default = ./glink.js");
+	process.exit(0)
+}
+
+if (parse.v) {
+	console.log("Glink makescript. Version 0.3");
+	process.exit(0);
+}
+
+if (parse.script && (parse.script != true)) {
+	glinkScript = parse.script;
+}
+
+/*
+	Create script evaluators.
+*/
 script = new ScriptMachine;
-
 Glink.setGlobalModuleLibrary(new ModuleLibrary(script));
 
+/*
+	Evaluate main script in constructed context.
+*/
 script.evalFile(glinkScript, {
-	ARGV : process.argv.slice(2),
+	ARGV : parse["_"],
 	console : console,
 	require : require,
 	path : require("path"),
