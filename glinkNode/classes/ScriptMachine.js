@@ -1,43 +1,69 @@
-var path = require("path")
-var fs = require("fs")
-var vm = require("vm")
+var path = require("path");
+var fs = require("fs");
+var vm = require("vm");
 
-var ScriptMachine = {}
+var File = require("./File.js");
 
-ScriptMachine.__evalFile = function (file, context, coding) {
-	if (coding == undefined) coding = 'utf-8'
+var copyFuncs = require("../lib/copyFuncs.js");
 
-	var oldFileName = this.currentFile
-	var oldDirName = this.currentDir
+function ScriptMachine() {
+	this.currentFile = "";
+	this.currentDir = process.env.PWD;
+	this.mtime = null;
+	this.context = {};
+	this.fileDependiesArray = [];
+}
 
-	var resolve = path.resolve(this.currentDir, file)
-	this.currentFile = resolve
-	this.currentDir = path.dirname(this.currentFile)
-	var contents = fs.readFileSync(resolve, coding)
-	vm.runInNewContext(contents,this.context,resolve)
+ScriptMachine.prototype.__evalFile = function (file, context, coding) {
+	if (coding == undefined) coding = 'utf-8';
 
-	this.currentFile = oldFileName
-	this.currentDir = oldDirName
+	var oldFileName = this.currentFile;
+	var oldDirName = this.currentDir;
+
+	var resolve = path.resolve(this.currentDir, file);
+	
+	//Добавляем файл в стэк зависимостей.
+	var file = new File(resolve);
+	var oldmtime = this.mtime;
+	this.fileDependiesArray.push(file);
+	
+	if (file.mtime > this.mtime) this.mtime = file.mtime;
+
+	//console.log(this.mtime)
+	//console.log("ddd")
+	
+	this.currentFile = resolve;
+	this.currentDir = path.dirname(this.currentFile);
+	var contents = fs.readFileSync(resolve, coding);
+	vm.runInNewContext(contents,context,resolve);
+	
+	//Очищаем файл из стэка зависимостей.
+	this.fileDependiesArray.splice(this.fileDependiesArray.length - 1, 1);
+
+	this.mtime = oldmtime;
+	this.currentFile = oldFileName;
+	this.currentDir = oldDirName;
 } 
 
-ScriptMachine.evalFile = function(file) {
+ScriptMachine.prototype.evalFile = function(file, context) {
+	var copycontext = copyFuncs.copyObject(context);
+
 	if (Array.isArray(file)) {
 		file.forEach(function(file) {
-			this.__evalFile(file, this.context)		
+			this.__evalFile(file, copycontext);		
 		}, this)
 	}
-	else this.__evalFile(file, this.context)
+	else this.__evalFile(file, copycontext);
 }
 
-ScriptMachine.setContext = function(context) {
-	this.context = context
-}
+//ScriptMachine.prototype.setContext = function(context) {
+//	this.context = context
+//}
 
-ScriptMachine.findInTree = function(root,pattern, hide) {
+ScriptMachine.prototype.findInTree = function(root,pattern, hide) {
 	var result = []
 	
 	recursiveFind = (dir, pattern, hide) => {
-		//console.log(dir)
 		var flist = fs.readdirSync(dir).map((file) => { return path.join(dir, file) })
 
 		var files = []
@@ -61,16 +87,8 @@ ScriptMachine.findInTree = function(root,pattern, hide) {
 	return result 
 }
 
-//ScriptMachine.evalScriptsInTree = function(root, pattern, hidepattern) {
-//}
-
-ScriptMachine.construct = function() {
-	var script = {}
-	script.currentFile = ""
-	script.currentDir = process.env.PWD
-	script.context = {}
-	script.__proto__ = ScriptMachine
-	return script
+ScriptMachine.prototype.exit = function() { 
+	process.exit(0);
 }
 
-exports.construct = ScriptMachine.construct
+module.exports = ScriptMachine

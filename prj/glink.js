@@ -1,60 +1,75 @@
 console.log(text.green("GLINK script start"))
 
-mlib = ModuleLibrary.construct(script)
-module = (mod) => { mlib.module(mod) }
+var files = script.findInTree("src", /.*.gjs/, /.*HIDE.*/);
+script.evalFile(files, this);
 
-variables = {
-	CXX : "g++",
-	CC : "gcc",
-	AR : "ar",
-	LD : "ld",
-	CXXFLAGS : "",
-	CCFLAGS : "",
+compiler = new CXXModuleCompiler({
+	buildutils : {
+		CXX : "g++",
+		CC : "gcc",
+		AR : "ar",
+		LD : "ld",
+		OBJDUMP : "objdump",
+	},
 
-	optimization : "-O3",
-	defines : [],
-	includePaths : ["-Iinc"],
-	libs : ""
+	opts : {
+		optimization : "-O2",
+
+		standart : {
+			cxx : "-std=c++11",
+			cc : "-std=c11",
+		},
+	
+		defines : [],
+		includePaths : ["include"],
+		libs : [],
+		//options : ["-fdata-sections", "-ffunction-sections", "-Wl,--gc-sections"],
+		//ld_options : ["-fdata-sections", "-ffunction-sections", "-Wl,--gc-sections"],
+	},
+
+	builddir : "./build",
+})
+compiler.debugInfo = false;
+
+if (ARGV[0] != undefined) {
+	switch (ARGV[0]) {
+		case "clean": compiler.cleanBuildDirectory();
+	} 
+
+	process.exit(0);
 }
 
-//rules = ruleops.substitute(rules, options)
-
-//cxx_rule = ruleops.substitute(rules.cxx, variables)
-//cxx_dep_rule = ruleops.substitute(rules.cxx_dep, variables)
-//cc_rule = ruleops.substitute(rules.cc, variables)
-//ld_rule = ruleops.substitute(rules.ld, variables)
-
-//console.log(build.buildPath("main.cpp", ".o", "build"))
-//console.log(build.buildPath("dasdmain.cpp", ".o", "build"))
-
-module ({
-	name : "main",
-	sources : ["main.cpp"],
-	submodules : {},
-	localVariables : {
-		includePaths : "locinc",
-		defines : "DEP=222"
+Module("main", {
+	sources : {
+		cxx : ["main.cpp"],
+		cc : [],
 	},
-	preroutine : (context) => {
-		//context.variables.includePaths
-	}
+
+	opts : {
+		includePaths : ["include3"],
+		target : "genos",
+	},
+
+	modules : [
+		{name : "test", opts : {includePaths : ["helpinclude"]}},
+		{name : "diag", impl : "stub"},
+	],
+
+	includeModules : [
+		{name : "genos_libc"},
+		{name : "ARCHDEP/stm32f407"},
+	],
 })
 
-module ({
-	name : "lib",
-	sources : ["mmm.cpp"],
-})
+//console.log(compiler.getModuleLibrary().getModule("main").mod);
 
+compiler.updateBuildDirectory();
+rets = compiler.assembleModule("main", {
+	optimization : "-O3",
+	includePaths : ["include2"],
+});
 
-scripts = script.findInTree("./", /.*\.gjs$/, /.*HIDE.*/)
-script.evalFile(scripts)
+if (rets === false) console.log(text.yellow("Nothing to do"))
 
-compiler = CXXModuleCompiler.construct()
-	.setModuleLibrary(mlib)
-	.printModuleList()
-
-//console.log(compiler)
-//compiler.printModuleList()
-//compiler.compile()
-
+//console.log(rets)
 console.log(text.green("Script is done"))
