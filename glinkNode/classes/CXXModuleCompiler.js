@@ -251,6 +251,10 @@ CXXModuleCompiler.prototype.resolveODRule = function(protorules, opts) {
 	if (!opts.libs) opts.libs = []
 	if (!opts.defines) opts.defines = []
 	if (!opts.includePaths) opts.includePaths = []
+	if (!opts.options) opts.options = {}
+	if (!opts.options.cxx) opts.options.cxx = []
+	if (!opts.options.cc) opts.options.cc = []
+	if (!opts.options.ld) opts.options.ld = []
 
 	var tempoptions = ruleops.substitute(protorules.__options__, {
 		OPTIMIZATION : opts.optimization,
@@ -374,8 +378,8 @@ CXXModuleCompiler.prototype.prepareConstructModuleTree = function(mod, addopts) 
 		//console.log("addopts",addopts)
 		if (addopts) {
 			if (addopts.target) addopts.target = path.resolve(mod.moduleDirectory, addopts.target); 
-			__this.mlib.restorePathArray(addopts.includePaths);
-			__this.mlib.restorePathArray(addopts.ldscripts);
+			__this.mlib.restorePathArray(addopts.includePaths, mod.moduleDirectory);
+			__this.mlib.restorePathArray(addopts.ldscripts, mod.moduleDirectory);
 		}
 
 		mod.__opts = __this.resolveOptions3(parentopts, mod.getOpts(), addopts);
