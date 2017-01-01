@@ -40,6 +40,15 @@ function CXXModuleCompiler(args) {
 	this.fileCache = new FileCache;
 	this.opts = args.opts;
 
+	if (!Array.isArray(this.opts.options.all)) this.opts.options.all = this.opts.options.all.split(' ');
+	if (!Array.isArray(this.opts.options.cxx)) this.opts.options.cxx = this.opts.options.cxx.split(' ');
+	if (!Array.isArray(this.opts.options.cc)) this.opts.options.cc = this.opts.options.cc.split(' ');
+	if (!Array.isArray(this.opts.options.ld)) this.opts.options.ld = this.opts.options.ld.split(' ');
+
+	this.opts.options.cxx = this.opts.options.cxx.concat(this.opts.options.all);
+	this.opts.options.cc = this.opts.options.cc.concat(this.opts.options.all);
+	this.opts.options.ld = this.opts.options.ld.concat(this.opts.options.all);
+
 	//Compiler rules prototypes.
 	this.rules = ruleops.substitute({
 		cxx_rule : "%CXX -c %src -o %tgt %__options__",
@@ -224,11 +233,11 @@ CXXModuleCompiler.prototype.dependCreate = function(sourcefile, dependfile, rule
 	@rule правила сборки файла зафисимостей.
 	@modmtime время изменения файла скрипта (модуля)
 */
-CXXModuleCompiler.prototype.dependUpdate = function(path, rule, modmtime) {
+CXXModuleCompiler.prototype.dependUpdate = function(path, rule, modmtime, weak) {
 	var sourcefile = this.fileCache.getFile(path);
 	var dependfile = this.fileCache.getFile(this.builddir + "/" + base64(path) + ".d");
 
-	if (depends.needToRecompile(dependfile, modmtime, this.fileCache)) {
+	if (depends.needToRecompile(dependfile, modmtime, this.fileCache, weak)) {
 		//this.dependCreate(sourcefile, dependfile, rule);
 		return true;
 	}
@@ -259,11 +268,11 @@ CXXModuleCompiler.prototype.objectCreate = function(sourcefile, objectfile, depe
 	this.fileCache.updateFile(objectfile.path);
 }
 
-CXXModuleCompiler.prototype.objectUpdate = function(path, deprule, objrule, modmtime) {
+CXXModuleCompiler.prototype.objectUpdate = function(path, deprule, objrule, modmtime, weak) {
 	var sourcefile = this.fileCache.getFile(path);
 	var objectfile = this.fileCache.getFile(this.builddir + "/" + base64(path) + ".o");
 
-	if (this.dependUpdate(path, deprule, modmtime)) {
+	if (this.dependUpdate(path, deprule, modmtime, weak)) {
 		var dependfile = this.fileCache.getFile(this.builddir + "/" + base64(path) + ".d");
 		this.objectCreate(sourcefile, objectfile, dependfile, objrule, deprule);
 	}
@@ -292,13 +301,13 @@ CXXModuleCompiler.prototype.executableCreate = function(objectfiles, objects, ta
 	this.fileCache.updateFile(targetfile.path);
 }
 
-CXXModuleCompiler.prototype.executableUpdate = function(objects, target, ldrule, modmtime) {
+CXXModuleCompiler.prototype.executableUpdate = function(objects, target, ldrule, modmtime, weak) {
 	var objectfiles = [];
 	objects.forEach((obj) => objectfiles.push(this.fileCache.getFile(obj)), this);
 
 	var targetfile = this.fileCache.getFile(target);
 
-	var maxMtime = modmtime;
+	var maxMtime = (weak === "noscript") ? null : modmtime;
 	objectfiles.forEach((obj) => {
 		if (obj.mtime > maxMtime) maxMtime = obj.mtime;
 	});
@@ -342,6 +351,21 @@ CXXModuleCompiler.prototype.checkModuleArrayDepends = function(modarray) {
 	})
 }
 
+CXXModuleCompiler.prototype.checkModuleOptions = function(modarray) {
+	modarray.forEach((mod) => {
+		switch (mod.__opts.weakRecompile) {
+			case "noscript": break; 
+			case "norecompile": break;
+			case undefined: break;
+			default : {
+				console.log(`Wrong ${text.yellow("weakRecompile")} option value. ${text.red(mod.__opts.weakRecompile)}`);
+				console.log("It can be: 'noscript', 'norecompile', undefined.");
+				process.exit(1);
+			}
+		}
+	})
+}
+
 CXXModuleCompiler.prototype.moduleTreeToArray = function(mod) {
 	var array = [mod];
 	function f(mod) {
@@ -360,22 +384,24 @@ CXXModuleCompiler.prototype.__updateModObjects = function(mod) {
 	assert(mod);
 	var odRules = this.resolveODRule(this.rules, mod.__opts); 
 
+	var weak = mod.__opts.weakRecompile;  
+
 	var sources = mod.getSources();
 	var objects = [];
 
 	if (sources.s) 
 		sources.s.map((file) => {
-			objects.push(this.objectUpdate(file, odRules.cc_dep_rule, odRules.cc_rule, mod.getMtime()));
+			objects.push(this.objectUpdate(file, odRules.cc_dep_rule, odRules.cc_rule, mod.getMtime(), weak));
 		});
 
 	if (sources.cc) 
 		sources.cc.map((file) => {
-			objects.push(this.objectUpdate(file, odRules.cc_dep_rule, odRules.cc_rule, mod.getMtime()));
+			objects.push(this.objectUpdate(file, odRules.cc_dep_rule, odRules.cc_rule, mod.getMtime(), weak));
 		});
 
 	if (sources.cxx) 
 		sources.cxx.map((file) => {
-			objects.push(this.objectUpdate(file, odRules.cxx_dep_rule, odRules.cxx_rule, mod.getMtime()));
+			objects.push(this.objectUpdate(file, odRules.cxx_dep_rule, odRules.cxx_rule, mod.getMtime(), weak));
 		});
 
 	return objects;
@@ -389,7 +415,7 @@ CXXModuleCompiler.prototype.__assembleObjects = function(mod, objects) {
 
 	this.restorePathArray(mod.getOpts().ldscripts, mod.moduleDirectory)
 
-	var executable = this.executableUpdate(objects, target, linkRule, mod.getMtime());
+	var executable = this.executableUpdate(objects, target, linkRule, mod.getMtime(), mod.__opts.weakRecompile);
 	return executable;
 }
 
@@ -408,12 +434,22 @@ CXXModuleCompiler.prototype.moduleStateRestore = function(mod) {
 	if (!opts.defines) opts.defines = []
 	if (!opts.includePaths) opts.includePaths = []
 	if (!opts.options) opts.options = {}
+	if (!opts.options.all) opts.options.all = []
 	if (!opts.options.cxx) opts.options.cxx = []
 	if (!opts.options.cc) opts.options.cc = []
 	if (!opts.options.ld) opts.options.ld = []
 
 	this.restorePathArray(opts.includePaths, mod.moduleDirectory);
 	this.restorePathArray(opts.ldscripts, mod.moduleDirectory);
+
+	if (!Array.isArray(opts.options.all)) opts.options.all = opts.options.all.split(' ');
+	if (!Array.isArray(opts.options.cxx)) opts.options.cxx = opts.options.cxx.split(' ');
+	if (!Array.isArray(opts.options.cc)) opts.options.cc = opts.options.cc.split(' ');
+	if (!Array.isArray(opts.options.ld)) opts.options.ld = opts.options.ld.split(' ');
+
+	opts.options.cxx = opts.options.cxx.concat(opts.options.all);
+	opts.options.cc = opts.options.cc.concat(opts.options.all);
+	opts.options.ld = opts.options.ld.concat(opts.options.all);
 
 	/*Restore Sources State.*/
 	var sources = mod.getSources();
@@ -427,9 +463,18 @@ CXXModuleCompiler.prototype.moduleStateRestore = function(mod) {
 	if (!sources.cc) sources.cc = [];
 	if (!sources.s) sources.s = [];
 
-	this.restorePathArray(sources.cxx, mod.moduleDirectory);
-	this.restorePathArray(sources.cc, mod.moduleDirectory);
-	this.restorePathArray(sources.s, mod.moduleDirectory);
+	if (!Array.isArray(sources.cxx)) sources.cxx = sources.cxx.split(' ');
+	if (!Array.isArray(sources.cc)) sources.cc = sources.cc.split(' ');
+	if (!Array.isArray(sources.s)) sources.s = sources.s.split(' ');
+
+	var sourcesDirectory = 
+		sources.directory ? 
+		path.resolve(mod.moduleDirectory, sources.directory) : 
+		mod.moduleDirectory; 
+
+	this.restorePathArray(sources.cxx, sourcesDirectory);
+	this.restorePathArray(sources.cc, sourcesDirectory);
+	this.restorePathArray(sources.s, sourcesDirectory);
 }
 
 CXXModuleCompiler.prototype.addOptsStateRestore = function(addopts, mod) { 
@@ -445,7 +490,7 @@ CXXModuleCompiler.prototype.resolveIncludeModules = function(mod) {
 	if (incmodsrec === undefined) return;
 
 	var incmods = [];
-
+		
 	/*Create all includeModules copies.*/
 	incmodsrec.forEach((inc) => {
 		incmods.push(this.mlib.getRealModule(inc.name, inc.impl));
@@ -453,6 +498,8 @@ CXXModuleCompiler.prototype.resolveIncludeModules = function(mod) {
 
 	/*For each included module:*/
 	incmods.forEach((inc) => {
+		this.moduleStateRestore(inc);
+
 		//If inc have own includeModules, resolve these.
 		this.resolveIncludeModules(inc);
 
@@ -472,15 +519,16 @@ CXXModuleCompiler.prototype.prepareModuleArray = function(mod, addopts) {
 
 	/*Worker*/
 	function f(mod, parentopts, addopts) {
-		/*Apply include modules. It's first operation, because submodules
-		should include all include modules's paths and depends.*/
-		__this.resolveIncludeModules(mod);
-
 		/*Add all relative paths to absolute.
 		We use moduleDirectory field's information to this*/
 		__this.moduleStateRestore(mod);
 		__this.addOptsStateRestore(addopts, mod);		
 
+		/*Apply include modules. It's first operation, because submodules
+		should include all include modules's paths and depends.*/
+		__this.resolveIncludeModules(mod);
+
+		
 		/*Resolve opts struct. It contains opts: parent, module, added*/
 		mod.__opts = __this.resolveOptions3(parentopts, mod.getOpts(), addopts);
 
@@ -525,6 +573,7 @@ CXXModuleCompiler.prototype.assembleModule = function(name, addopts) {
 
 	//Check depends of modules.
 	this.checkModuleArrayDepends(modarray);
+	this.checkModuleOptions(modarray);
 
 	//Compile operation.
 	var objects = [];

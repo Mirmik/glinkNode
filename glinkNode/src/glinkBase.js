@@ -4,7 +4,7 @@ var ScriptMachine = require("./classes/ScriptMachine.js");
 var Glink = require("./classes/Glink.js");
 var ModuleLibrary = require("./classes/ModuleLibrary.js");
 
-var argumentParser = require("./lib/argumentParser.js").argumentParser;
+var path = require("path");
 
 /*
 	Default main script address
@@ -33,6 +33,14 @@ if (parse.script && (parse.script != true)) {
 	glinkScript = parse.script;
 }
 
+if (parse.clone) {
+	if (parse.clone == true) parse.clone = "./glink/";
+	var clone = path.resolve(process.env.PWD, parse.clone)
+
+	console.log("CLONE", clone);
+	process.exit(0);
+}
+
 /*
 	Create script evaluators.
 */
@@ -43,24 +51,29 @@ Glink.setGlobalModuleLibrary(new ModuleLibrary(script));
 	Evaluate main script in constructed context.
 */
 script.evalFile(glinkScript, {
-	ARGV : parse["_"],
-	console : console,
-	require : require,
-	path : require("path"),
-	ruleops : ruleops,
-	process : process,
-	text : text,
-	ModuleLibrary : ModuleLibrary,
 	ScriptMachine : require("./classes/ScriptMachine.js"),
+	ModuleLibrary : ModuleLibrary,
 	CXXModuleCompiler : require("./classes/CXXModuleCompiler.js"),
 	ModuleClass : require("./classes/ModuleClass.js"),
 	ImplementationClass : require("./classes/ImplementationClass.js"),
-	depends : require("./lib/depends.js"),
-	script : script,
+
 	Module : Glink.Module,
 	Implementation : Glink.Implementation,
 	setGlobalModuleLibrary : Glink.setGlobalModuleLibrary,
 	globalModuleLibrary : Glink.globalModuleLibrary,
+
+	ARGV : parse["_"],
+
+	process : process,
+	require : require,
+	console : console,
+	path : path,
+
+	ruleops : ruleops,
+	text : text,
+	depends : require("./lib/depends.js"),
+
+	script : script,
 
 	Array : Array,
 	Object : Object,

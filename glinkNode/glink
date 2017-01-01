@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-#coding: utf-8
-
-export NODE_PATH="/usr/local/lib/node_modules"
-nodejs /usr/glink/glinkBase.js $1 $2 $3 $4 $5 $6

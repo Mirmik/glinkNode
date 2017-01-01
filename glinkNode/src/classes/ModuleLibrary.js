@@ -1,7 +1,6 @@
 text = require("../lib/text.js")
 path = require("path")
 assert = require("assert")
-copyFuncs = require("../lib/copyFuncs.js")
 ModuleClass = require("./ModuleClass.js")
 Implementation = require("./ImplementationClass.js")
 VariantModuleClass = require("./VariantModuleClass.js")

@@ -2,9 +2,10 @@ var fs = require("fs")
 
 var depends = {}
 
-depends.needToRecompile = function(depfile, modmtime, fileCache) {
+depends.needToRecompile = function(depfile, modmtime, fileCache, weak) {
 	if (depfile.exists == false) return true; 
-	
+	if (weak === "norecompile") return false;
+
 	var text = fs.readFileSync(depfile.path).toString();
 	
 	//console.log(text)
@@ -13,7 +14,7 @@ depends.needToRecompile = function(depfile, modmtime, fileCache) {
 	var arr = text.match(/[^ \n\\]+/g);
 	arr = arr.splice(1, arr.length - 1);
 
-	var maxtime = modmtime;
+	var maxtime = (weak === "noscript") ? null : modmtime;
 	
 	arr.forEach(function(filepath){
 		file = fileCache.getFile(filepath);
