@@ -40,6 +40,13 @@ function CXXModuleCompiler(args) {
 	this.fileCache = new FileCache;
 	this.opts = args.opts;
 
+	if (this.opts.options === undefined) this.opts.options = {};
+
+	if (!this.opts.options.all) this.opts.options.all = []
+	if (!this.opts.options.cxx) this.opts.options.cxx = []
+	if (!this.opts.options.cc) this.opts.options.cc = []
+	if (!this.opts.options.ld) this.opts.options.ld = []
+		
 	if (!Array.isArray(this.opts.options.all)) this.opts.options.all = this.opts.options.all.split(' ');
 	if (!Array.isArray(this.opts.options.cxx)) this.opts.options.cxx = this.opts.options.cxx.split(' ');
 	if (!Array.isArray(this.opts.options.cc)) this.opts.options.cc = this.opts.options.cc.split(' ');

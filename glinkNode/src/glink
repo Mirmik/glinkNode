@@ -3,7 +3,7 @@
 
 export NODE_PATH="/usr/local/lib/node_modules"
 
-glinkBase=/usr/glink/glinkBase.js
+glinkBase=INSTALLDIRglinkBase.js
 basefile=./.glink/base
 
 if [ -f "$basefile" ]; then 
